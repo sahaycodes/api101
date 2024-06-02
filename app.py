@@ -71,6 +71,8 @@ def plot_chart(df, title):
 def plot_sim_df(sim_df):
     fig = px.scatter(sim_df, x='Volatility', y='Returns', color='Sharpe Ratio', title='MonteCar Sim: Ret vs Volatility',
                      labels={'Volatility': 'Volatility', 'Returns': 'Returns'})
+
+    fig.write_html('./monte_carlo_simulation.html')
     fig.show()
 
 def gaussian_pdf(x, mean, std):
