@@ -95,9 +95,9 @@ def remove_spaces(text):
 @app.route('/optimize', methods=['POST'])
 def optimize():
     data = request.json
-    lifestyle_risk = int(input(data('lifestyle_risk')))
-    expected_annual_roi = float(input(data('expected_annual_roi')))
-    principal_amount = float(input(data('principal_amount')))
+    lifestyle_risk = int(data('lifestyle_risk'))
+    expected_annual_roi = float(data('expected_annual_roi'))
+    principal_amount = float(data('principal_amount'))
     
     info_data = data.get('info_data')
     info = pd.DataFrame(info_data)
