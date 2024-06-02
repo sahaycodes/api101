@@ -6,7 +6,7 @@ import re
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 import plotly.express as px
-
+#123456
 def get_data(assets):
     df = pd.DataFrame()
     yf.pdr_override()
