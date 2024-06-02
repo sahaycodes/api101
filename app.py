@@ -9,6 +9,7 @@ import re
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 import plotly.express as px
+import os 
 
 app = Flask(__name__)
 
@@ -72,7 +73,8 @@ def plot_sim_df(sim_df):
     fig = px.scatter(sim_df, x='Volatility', y='Returns', color='Sharpe Ratio', title='MonteCar Sim: Ret vs Volatility',
                      labels={'Volatility': 'Volatility', 'Returns': 'Returns'})
 
-    fig.write_html('./monte_carlo_simulation.html')
+    plot_filename = 'monte_carlo_simulation.html'
+    fig.write_html(os.path.join('static', plot_filename))
     fig.show()
 
 def gaussian_pdf(x, mean, std):
