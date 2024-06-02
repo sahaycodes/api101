@@ -1,6 +1,4 @@
-# app.py
-
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import yfinance as yf
 from pandas_datareader import data as web
 import pandas as pd
@@ -9,7 +7,7 @@ import re
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 import plotly.express as px
-import os 
+import os
 
 app = Flask(__name__)
 
@@ -61,9 +59,10 @@ def optimize_portfolio(df, tickers_string, starting_amount=100):
     port_variance = np.dot(optimal_weights.T, np.dot(cov_matrix, optimal_weights))
     port_volatility = np.sqrt(port_variance)
     sharpe_ratio = (annual_return - 0.02) / port_volatility
-    plot_sim_df(sim_df)
-
-    return weights_df, annual_return, port_volatility, sharpe_ratio
+    
+    plot_filename = plot_sim_df(sim_df)
+    
+    return weights_df, annual_return, port_volatility, sharpe_ratio, plot_filename
 
 def plot_chart(df, title):
     fig = px.line(df, title=title)
@@ -72,10 +71,9 @@ def plot_chart(df, title):
 def plot_sim_df(sim_df):
     fig = px.scatter(sim_df, x='Volatility', y='Returns', color='Sharpe Ratio', title='MonteCar Sim: Ret vs Volatility',
                      labels={'Volatility': 'Volatility', 'Returns': 'Returns'})
-
     plot_filename = 'monte_carlo_simulation.html'
     fig.write_html(os.path.join('static', plot_filename))
-    fig.show()
+    return plot_filename
 
 def gaussian_pdf(x, mean, std):
     return (1 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
@@ -93,13 +91,16 @@ def calculate_probabilities(user_point, centroids):
 def remove_spaces(text):
     return re.sub(r'\s+', '', text)
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
 
 @app.route('/optimize', methods=['POST'])
 def optimize():
     data = request.json
-    lifestyle_risk = int(data('lifestyle_risk'))
-    expected_annual_roi = float(data('expected_annual_roi'))
-    principal_amount = float(data('principal_amount'))
+    lifestyle_risk = int(data['lifestyle_risk'])
+    expected_annual_roi = float(data['expected_annual_roi'])
+    principal_amount = float(data['principal_amount'])
     
     info_data = data.get('info_data')
     info = pd.DataFrame(info_data)
@@ -140,13 +141,14 @@ def optimize():
     clusters_df['Weights'] = weights_df['Weight']
 
     results = []
+    plot_urls = []
     for index, row in clusters_df.iterrows():
         ticker = str(row['Symbols'])
         ticker = remove_spaces(ticker)
         assets = ticker.split(',')
         df = get_data(assets)
         starting_amount = row['Weights']
-        weights_df, annual_return, port_volatility, sharpe_ratio = optimize_portfolio(df, ticker, starting_amount=starting_amount)
+        weights_df, annual_return, port_volatility, sharpe_ratio, plot_filename = optimize_portfolio(df, ticker, starting_amount=starting_amount)
         results.append({
             "Symbols": row['Symbols'],
             "Weights": weights_df.to_dict(),
@@ -154,8 +156,16 @@ def optimize():
             "Volatility": port_volatility,
             "Sharpe Ratio": sharpe_ratio
         })
+        plot_urls.append(request.host_url + 'static/' + plot_filename)
     
-    return jsonify(results)
+    response = {
+        "results": results,
+        "plots": plot_urls
+    }
+    
+    return jsonify(response)
 
 if __name__ == '__main__':
+    if not os.path.exists('static'):
+        os.makedirs('static')
     app.run(host='0.0.0.0', port=5000)
